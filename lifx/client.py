@@ -169,11 +169,12 @@ class Client(object):
         for device in filter(lambda x:x.seen_ago > poll_delta,  self._devices.values()):
             device.send_poll_packet()
 
-    def get_devices(self, max_seen=None):
+    def get_devices(self, max_seen=None, refine=None):
         """
         Get a list of all responding devices.
 
         :param max_seen: The number of seconds since the device was last seen, defaults to 3 times the devicepoll interval.
+        :param refine: Filter list of devices using this function
         """
         if max_seen is None:
             max_seen = self._devicepolltime * MISSED_POLLS
@@ -181,6 +182,19 @@ class Client(object):
         seen_delta = timedelta(seconds=max_seen)
 
         devices = filter(lambda x:x.seen_ago < seen_delta, self._devices.values())
+
+        if refine is None:
+            refine = lambda x: True
+
+        alive = []
+        for d in devices:
+            try:
+                d.label
+                if refine(d):
+                    alive.append(d)
+            except device.DeviceTimeoutError:
+                pass
+        devices = alive
 
         # Sort by device id to ensure consistent ordering
         return sorted(devices, key=lambda k:k.id)
@@ -227,7 +241,7 @@ class Client(object):
         :param by_label: The label we are looking for.
         :returns: list -- The devices that match criteria
         """
-        return filter(lambda d: d.label == label, self.get_devices())
+        return self.get_devices(refine=lambda d: d.label == label)
 
     def by_id(self, id):
         """
@@ -236,7 +250,7 @@ class Client(object):
         :param id: The device id
         :returns: Device -- The device with the matching id.
         """
-        return filter(lambda d: d.id == id, self.get_devices())[0]
+        return self.get_devices(refine=lambda d: d.id == id)
 
     def by_power(self, power):
         """
@@ -245,7 +259,7 @@ class Client(object):
         :param power: True returns all devices that are on, False returns ones that are off.
         :returns: list -- The devices that match criteria
         """
-        return filter(lambda d: d.power == power, self.get_devices())
+        return self.get_devices(refine=lambda d: d.power == power)
 
     def by_group_id(self, group_id):
         """
@@ -254,7 +268,7 @@ class Client(object):
         :param group_id: The group id to match on each light.
         :returns: list -- The devices that match criteria
         """
-        return filter(lambda d: d.group_id == group_id, self.get_devices())
+        return self.get_devices(refine=lambda d: d.group_id == group_id)
 
     def by_location_id(self, location_id):
         """
@@ -263,7 +277,7 @@ class Client(object):
         :param group_id: The group id to match on each light.
         :returns: list -- The devices that match criteria
         """
-        return filter(lambda d: d.location_id == location_id, self.get_devices())
+        return self.get_devices(refine=lambda d: d.location_id == location_id)
 
     def __getitem__(self, key):
         return self.get_devices()[key]

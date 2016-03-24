@@ -27,6 +27,7 @@ class Device(object):
         # Our Device
         self._device_id = device_id
         self._host = host
+        self._label = None
 
         # Services
         self._services = {}
@@ -257,13 +258,16 @@ class Device(object):
         """
         The label for the device, setting this will change the label on the device.
         """
-        response = self._block_for_response(pkt_type=protocol.TYPE_GETLABEL)
-        return protocol.bytes_to_label(response.label)
+        if self._label is None:
+            response = self._block_for_response(pkt_type=protocol.TYPE_GETLABEL)
+            self._label = protocol.bytes_to_label(response.label)
+        return self._label
 
     @label.setter
     def label(self, label):
         newlabel = bytearray(label.encode('utf-8')[0:protocol.LABEL_MAXLEN])
 
+        self._label = newlabel
         return self._block_for_ack(newlabel, pkt_type=protocol.TYPE_SETLABEL)
 
     def fade_power(self, power, duration=DEFAULT_DURATION):
