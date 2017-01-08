@@ -52,6 +52,7 @@ class Device(object):
 
     def _packethandler(self, host, port, packet):
         self._seen()
+	self._host = host
 
         # If it was a service packet
         if packet.protocol_header.pkt_type == protocol.TYPE_STATESERVICE:
